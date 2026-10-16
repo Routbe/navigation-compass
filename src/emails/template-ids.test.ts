@@ -95,14 +95,14 @@ describe("brevoTemplateId", () => {
   });
 
   it("follows the master fallback matrix", () => {
-    expect(brevoTemplateId("payment", "pt")).toBe(63);
+    expect(brevoTemplateId("payment", "pt")).toBe(68);
     expect(brevoTemplateId("refund", "nl")).toBe(82);
     expect(brevoTemplateId("cancellation", "de")).toBe(75);
     expect(brevoTemplateId("renewal", "pt")).toBe(58);
     expect(reserveTemplateId("renewal")).toBe(61);
-    expect(brevoTemplateId("form", "es")).toBe(23);
+    expect(brevoTemplateId("form", "es")).toBe(26);
     expect(brevoTemplateId("payment_confirmation", "fr")).toBe(34);
-    expect(brevoTemplateId("payment_issue", "zh")).toBe(43);
+    expect(brevoTemplateId("payment_issue", "zh")).toBe(50);
     expect(brevoTemplateId("subdomain_claim", "fr")).toBe(2);
   });
 
@@ -133,7 +133,7 @@ describe("environment overrides", () => {
     setEnv("BREVO_TEMPLATE_FORM_DE", "not-a-number");
     expect(brevoTemplateId("form", "de")).toBe(EMAIL_TEMPLATE_IDS.form.de);
     setEnv("BREVO_TEMPLATE_FORM_ES", "-4");
-    expect(brevoTemplateId("form", "es")).toBe(23);
+    expect(brevoTemplateId("form", "es")).toBe(26);
   });
 
   it("overrides category fallback, admin alert and global fallback", () => {

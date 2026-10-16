@@ -100,8 +100,6 @@ function block(base: number, languages: readonly EmailLanguage[]): LangMap {
 }
 
 const NINE = EMAIL_LANGUAGES;
-/** Blocks that only exist in NL/EN/FR/DE in Brevo; other languages fall back to EN. */
-const FOUR: readonly EmailLanguage[] = ["nl", "en", "fr", "de"];
 
 /** Verified Brevo template ID per category × language. */
 export const EMAIL_TEMPLATE_IDS: Record<EmailCategory, LangMap> = {
@@ -113,13 +111,13 @@ export const EMAIL_TEMPLATE_IDS: Record<EmailCategory, LangMap> = {
   reauthentication: AUTH_BLOCK,
   confirmation: AUTH_BLOCK,
   deletion: AUTH_BLOCK,
-  form: block(22, FOUR),
-  payment_confirmation: block(32, FOUR),
-  payment_issue: block(42, FOUR),
+  form: block(22, NINE),
+  payment_confirmation: block(32, NINE),
+  payment_issue: block(42, NINE),
   renewal: block(52, NINE),
-  payment: block(62, FOUR),
-  cancellation: block(72, FOUR),
-  refund: block(82, FOUR),
+  payment: block(62, NINE),
+  cancellation: block(72, NINE),
+  refund: block(82, NINE),
   subdomain_claim: { nl: 2 },
   transfer: {},
   security: {},
@@ -142,13 +140,13 @@ export const EMAIL_CATEGORY_FALLBACK: Record<EmailCategory, number> = {
   reauthentication: 21,
   confirmation: 21,
   deletion: 21,
-  form: 0,
-  payment_confirmation: 0,
-  payment_issue: 0,
+  form: 31,
+  payment_confirmation: 41,
+  payment_issue: 51,
   renewal: 61,
-  payment: 0,
-  cancellation: 0,
-  refund: 0,
+  payment: 71,
+  cancellation: 81,
+  refund: 91,
   subdomain_claim: 0,
   transfer: 0,
   security: 0,
