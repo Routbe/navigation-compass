@@ -11,7 +11,11 @@ import { copyFor, type CopyPack } from "./copy";
 
 /** Brevo placeholder with UPPER → lower → literal fallback. */
 export const P = (key: string, fallback: string) =>
-  `{{ params.${key} | default: params.${key.toLowerCase()} | default: "${fallback.replace(/"/g, "'")}" }}`;
+  `{{ params.${key} | default: params.${key.toLowerCase()} | default: "${fallback.replace(/"/g, "&quot;")}" }}`;
+
+/** Same, single-quoted, for use inside an href="…" attribute (URL fallbacks only). */
+export const PA = (key: string, fallback: string) =>
+  `{{ params.${key} | default: params.${key.toLowerCase()} | default: '${fallback}' }}`;
 
 const DASHBOARD = "https://rout.be/dashboard";
 
@@ -47,7 +51,7 @@ export function brevoTemplate(kind: BrevoKind, lang: string): BuiltMail {
   switch (kind) {
     case "login": {
       const t = c.login;
-      const link = P("MAGIC_LINK", "https://rout.be/auth").replace("params.magic_link", "params.url | default: params.link");
+      const link = PA("MAGIC_LINK", "https://rout.be/auth").replace("params.magic_link", "params.url | default: params.link");
       return mk(t.subject.replace("{code}", "{{ params.CODE | default: params.code }}"), t.pre, t.badge, "auth", D.auth, t.title, [
         p(t.intro),
         codeBox(t.codeLabel, P("CODE", "______").replace("params.code |", "params.code | default: params.token |")),
@@ -84,7 +88,7 @@ export function brevoTemplate(kind: BrevoKind, lang: string): BuiltMail {
         g,
         p(t.intro),
         box(t.boxTitle, [[t.amount, P("AMOUNT", "—")], [t.invoice, P("INVOICE_ID", "—")], [t.reason, P("REASON", t.reasonFallback)]]),
-        button(t.button, P("URL", DASHBOARD)),
+        button(t.button, PA("URL", DASHBOARD)),
         p(t.outro),
       ]);
     }
@@ -94,7 +98,7 @@ export function brevoTemplate(kind: BrevoKind, lang: string): BuiltMail {
         g,
         p(t.intro),
         box(t.boxTitle, [[t.plan, P("PLAN", "ROUT Node")], [t.amount, P("AMOUNT", "—")], [t.date, P("DATE", t.dateFallback)]]),
-        button(t.button, P("URL", DASHBOARD)),
+        button(t.button, PA("URL", DASHBOARD)),
         p(t.outro),
       ]);
     }
@@ -104,7 +108,7 @@ export function brevoTemplate(kind: BrevoKind, lang: string): BuiltMail {
         g,
         p(t.intro),
         box(t.boxTitle, [[t.plan, P("PLAN", "ROUT Node")], [t.end, P("END_DATE", t.endFallback)]]),
-        button(t.button, P("URL", DASHBOARD), "ghost"),
+        button(t.button, PA("URL", DASHBOARD), "ghost"),
         p(t.outro),
       ]);
     }
