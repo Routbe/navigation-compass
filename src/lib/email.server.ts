@@ -11,7 +11,7 @@
  */
 import { EMAIL_TEMPLATE_IDS, GLOBAL_FALLBACK_TEMPLATE_ID, type EmailCategory } from "@/emails/template-ids";
 
-export const EMAIL_LOCALES = ["nl", "fr", "en", "de"] as const;
+export const EMAIL_LOCALES = ["nl", "en", "fr", "de", "es", "it", "pt", "pl", "zh"] as const;
 export type EmailLocale = (typeof EMAIL_LOCALES)[number];
 
 export const EMAIL_INTENTS = [
@@ -37,37 +37,6 @@ const INTENT_CATEGORY: Record<EmailIntent, EmailCategory> = {
   welcome: "welcome",
 };
 
-const SUBJECTS: Record<EmailLocale, Record<EmailIntent, string>> = {
-  nl: {
-    "magic-link": "Je inloglink voor ROUT",
-    verification: "Bevestig je e-mailadres",
-    "password-reset": "Stel je wachtwoord opnieuw in",
-    "email-change": "Bevestig je nieuwe e-mailadres",
-    welcome: "Welkom bij ROUT",
-  },
-  fr: {
-    "magic-link": "Votre lien de connexion ROUT",
-    verification: "Confirmez votre adresse e-mail",
-    "password-reset": "Réinitialisez votre mot de passe",
-    "email-change": "Confirmez votre nouvelle adresse",
-    welcome: "Bienvenue sur ROUT",
-  },
-  en: {
-    "magic-link": "Your ROUT sign-in link",
-    verification: "Confirm your email address",
-    "password-reset": "Reset your password",
-    "email-change": "Confirm your new email address",
-    welcome: "Welcome to ROUT",
-  },
-  de: {
-    "magic-link": "Dein ROUT-Anmeldelink",
-    verification: "Bestätige deine E-Mail-Adresse",
-    "password-reset": "Passwort zurücksetzen",
-    "email-change": "Bestätige deine neue E-Mail-Adresse",
-    welcome: "Willkommen bei ROUT",
-  },
-};
-
 /** Statisch register: intent × taal → Brevo-template-ID (O(1), geen DB). */
 export const TEMPLATE_REGISTRY: Readonly<Record<EmailIntent, Partial<Record<EmailLocale, number>>>> =
   Object.freeze(
@@ -81,7 +50,7 @@ export const TEMPLATE_REGISTRY: Readonly<Record<EmailIntent, Partial<Record<Emai
     ) as Record<EmailIntent, Partial<Record<EmailLocale, number>>>,
   );
 
-/** Alles buiten nl/fr/en/de → 'en'. `fr-BE` → `fr`. */
+/** Onbekende talen → 'en'. `fr-BE` → `fr`. */
 export function normalizeLocale(value: unknown): EmailLocale {
   if (typeof value !== "string") return "en";
   const short = value.trim().toLowerCase().slice(0, 8).split(/[-_]/)[0] ?? "";
@@ -150,27 +119,14 @@ async function dispatch(input: SendLocalizedEmailInput): Promise<boolean> {
     const link = cap(input.payload?.link, 2048);
     const code = cap(input.payload?.code, 64);
     const name = cap(input.payload?.name, 120);
-    const subject = SUBJECTS[locale][intent];
     const { sendMail } = await import("@/emails/send.server");
-    let html: string | undefined;
-    if (intent === "magic-link" && link) {
-      try {
-        const [{ render }, { createElement }, { MagicLinkEmail }] = await Promise.all([
-          import("@react-email/render"),
-          import("react"),
-          import("@/emails/react/MagicLinkEmail"),
-        ]);
-        html = await render(
-          createElement(MagicLinkEmail, { locale, magic_link: link, otp_code: code || undefined, user_handle: name || undefined }),
-        );
-      } catch (err) {
-        // Render-fout → Brevo-template als vangnet.
-        console.error("[email] render failed, using Brevo template", err instanceof Error ? err.message : err);
-      }
-    }
+    // Eén ROUT-design voor elke auth-mail; de Brevo-template blijft vangnet.
+    const { renderAuthMail } = await import("@/emails/design/mails");
+    const { subject, html } = renderAuthMail(intent, locale, { link, code, name });
     const result = await sendMail({
       html,
-      htmlFirst: Boolean(html),
+      htmlFirst: true,
+      language: locale,
       to,
       subject,
       templateId: resolveTemplateId(intent, locale) || undefined,
