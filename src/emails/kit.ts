@@ -10,6 +10,12 @@
  * quiet footer. Mail clients ignore CSS variables, so colours are inline.
  */
 
+import * as D from "./design/layout";
+import { esc, type Accent } from "./design/layout";
+import { copyFor, type CopyPack } from "./design/copy";
+
+type DeskKey = keyof CopyPack["desks"];
+
 export const KIT = {
   page: "#f5f4f2",
   card: "#ffffff",
@@ -31,96 +37,68 @@ export const KIT = {
 
 export type Tone = "neutral" | "success" | "warning" | "danger" | "info" | "creator" | "business";
 
-const TONES: Record<Tone, { fg: string; bg: string }> = {
-  neutral: { fg: KIT.muted, bg: "#f1efec" },
-  success: { fg: KIT.mint, bg: KIT.mintBg },
-  warning: { fg: KIT.amber, bg: KIT.amberBg },
-  danger: { fg: KIT.red, bg: KIT.redBg },
-  info: { fg: KIT.blue, bg: KIT.blueBg },
-  creator: { fg: KIT.pink, bg: KIT.pinkBg },
-  business: { fg: KIT.ink, bg: "#ecebe8" },
+const TONE_ACCENT: Record<Tone, Accent> = {
+  neutral: "neutral",
+  success: "success",
+  warning: "warning",
+  danger: "danger",
+  info: "info",
+  creator: "creator",
+  business: "ink",
 };
 
-const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif";
-
-export function esc(value: unknown): string {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+export { esc };
 
 /** Only http(s) links ever reach an href. */
 export function safeUrl(url: string): string {
   return /^https?:\/\//i.test(url) ? esc(url) : "#";
 }
 
-export const pill = (label: string, tone: Tone = "neutral") => {
-  const t = TONES[tone];
-  return `<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:${t.bg};color:${t.fg};font:600 11px/1.4 ${FONT};letter-spacing:.06em;text-transform:uppercase">${esc(label)}</span>`;
-};
+/**
+ * Status label. Rendered as the coloured badge in the mail header by
+ * `layout()`; the marker carries tone + escaped label.
+ */
+export const pill = (label: string, tone: Tone = "neutral") => `<!--rout-badge:${tone}:${esc(label).toUpperCase()}-->`;
 
-export const heading = (text: string) =>
-  `<h1 style="margin:14px 0 10px;font:650 22px/1.3 ${FONT};color:${KIT.text};letter-spacing:-.01em">${esc(text)}</h1>`;
-
-export const paragraph = (text: string) =>
-  `<p style="margin:0 0 14px;font:400 15px/1.6 ${FONT};color:${KIT.text}">${esc(text)}</p>`;
-
-export const note = (text: string) =>
-  `<p style="margin:14px 0 0;font:400 13px/1.55 ${FONT};color:${KIT.muted}">${esc(text)}</p>`;
-
-export const quote = (text: string) =>
-  `<div style="margin:6px 0 16px;padding:12px 14px;border-left:3px solid ${KIT.border};background:#faf9f7;border-radius:6px;font:400 14px/1.55 ${FONT};color:${KIT.text};white-space:pre-wrap">${esc(text)}</div>`;
-
-export const code = (value: string) =>
-  `<div style="margin:6px 0 18px;padding:16px;border-radius:12px;background:#f5f4f2;text-align:center;font:600 28px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.3em;color:${KIT.ink}">${esc(value)}</div>`;
+export const heading = (text: string) => D.h1(esc(text));
+export const paragraph = (text: string) => D.p(esc(text));
+export const note = (text: string) => D.notice(esc(text));
+export const quote = (text: string) => D.quote("", esc(text));
+export const code = (value: string) => D.codeBox("", esc(value));
 
 export function details(rows: Array<[string, unknown]>): string {
-  const body = rows
-    .filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== "")
-    .map(
-      ([k, v]) =>
-        `<tr><td style="padding:9px 0;border-top:1px solid ${KIT.border};font:500 13px/1.4 ${FONT};color:${KIT.muted};width:38%;vertical-align:top">${esc(k)}</td>` +
-        `<td style="padding:9px 0;border-top:1px solid ${KIT.border};font:500 14px/1.4 ${FONT};color:${KIT.text};word-break:break-word">${esc(v)}</td></tr>`,
-    )
-    .join("");
-  return body
-    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 18px;border-bottom:1px solid ${KIT.border}">${body}</table>`
-    : "";
+  const kept = rows.filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== "");
+  return D.box("", kept.map(([k, v]) => [esc(k), esc(v)] as [string, string]));
 }
 
 type BtnStyle = "primary" | "approve" | "reject" | "ghost";
-const BTN: Record<BtnStyle, string> = {
-  primary: `background:${KIT.ink};color:#ffffff;border:1px solid ${KIT.ink}`,
-  approve: `background:${KIT.mint};color:#ffffff;border:1px solid ${KIT.mint}`,
-  reject: `background:#ffffff;color:${KIT.red};border:1px solid ${KIT.red}`,
-  ghost: `background:#ffffff;color:${KIT.text};border:1px solid ${KIT.border}`,
-};
 
-export const button = (label: string, url: string, style: BtnStyle = "primary") =>
-  `<a href="${safeUrl(url)}" style="display:inline-block;${BTN[style]};text-decoration:none;padding:12px 22px;border-radius:12px;font:600 14px/1 ${FONT}">${esc(label)}</a>`;
+export const button = (label: string, url: string, style: BtnStyle = "primary") => D.buttonLink(esc(label), safeUrl(url), style);
 
 /** One or more buttons side by side (wrap on narrow screens). */
-export const actions = (...buttons: string[]) =>
-  `<div style="margin:22px 0 4px">${buttons.map((b) => `<span style="display:inline-block;margin:0 8px 8px 0">${b}</span>`).join("")}</div>`;
+export const actions = (...buttons: string[]) => D.buttons(...buttons);
 
-export const linkFallback = (label: string, url: string) =>
-  `<p style="margin:10px 0 0;font:400 12px/1.5 ${FONT};color:${KIT.muted}">${esc(label)}<br/><a href="${safeUrl(url)}" style="color:${KIT.muted};word-break:break-all">${esc(url)}</a></p>`;
+export const linkFallback = (label: string, url: string) => D.urlBox(esc(label), safeUrl(url));
 
-/** Full document. `blocks` are already-escaped kit fragments. */
-export function layout(opts: { lang?: string; preview: string; blocks: string[]; footer?: string }): string {
-  const lang = esc(opts.lang ?? "nl");
-  const footer = opts.footer ?? "ROUT · rout.be — je identiteit, je links, jouw regels.";
-  return `<!doctype html>
-<html lang="${lang}"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="color-scheme" content="light only"/><title>ROUT</title></head>
-<body style="margin:0;padding:0;background:${KIT.page}">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(opts.preview)}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${KIT.page}"><tr><td align="center" style="padding:32px 14px">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px">
-<tr><td style="padding:0 4px 18px;font:700 15px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.22em;color:${KIT.ink}">ROUT</td></tr>
-<tr><td style="background:${KIT.card};border:1px solid ${KIT.border};border-radius:18px;padding:30px 28px">${opts.blocks.join("")}</td></tr>
-<tr><td style="padding:18px 4px 0;font:400 12px/1.5 ${FONT};color:${KIT.muted}">${esc(footer)}</td></tr>
-</table></td></tr></table></body></html>`;
+/** Full document in the shared ROUT design. `blocks` are already-escaped kit fragments. */
+export function layout(opts: { lang?: string; preview: string; blocks: string[]; footer?: string; desk?: DeskKey }): string {
+  const lang = (opts.lang ?? "nl").slice(0, 2).toLowerCase();
+  const c = copyFor(lang);
+  let badge = "ROUT DESK";
+  let accent: Accent = "neutral";
+  const blocks: string[] = [];
+  for (const b of opts.blocks) {
+    const m = /^<!--rout-badge:(\w+):(.*)-->$/.exec(b);
+    if (m) {
+      if (badge === "ROUT DESK") {
+        accent = TONE_ACCENT[m[1] as Tone] ?? "neutral";
+        badge = m[2] ?? badge;
+      }
+      continue;
+    }
+    blocks.push(b);
+  }
+  if (opts.footer) blocks.push(D.notice(esc(opts.footer)));
+  const title = /<h1[^>]*>(.*?)<\/h1>/.exec(blocks.join(""))?.[1] ?? "ROUT";
+  return D.shell({ lang, title, preheader: esc(opts.preview), badge, accent, desk: c.desks[opts.desk ?? "desk"], body: blocks });
 }
